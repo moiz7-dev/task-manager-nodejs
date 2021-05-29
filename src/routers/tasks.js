@@ -2,6 +2,8 @@ const express = require('express');
 const router = new express.Router();
 const Task = require('../models/tasks');
 const auth = require('../middlewares/auth');
+const multer = require('multer')
+const sharp = require('sharp');
 
 
 // add new task
@@ -113,6 +115,79 @@ router.delete('/tasks/:id', auth, async (req, res) => {
         res.send({ success: true, message: 'Task deleted successfully' })
     } catch (e) {
         res.status(500).send(e)
+    }
+})
+
+//image
+const upload = multer({
+    limits: {
+        fileSize: 1024 * 1024 // 1mb size 
+    },
+    fileFilter(req, file, cb) {
+
+        if (!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            return cb(new Error('File type must be jpg, jpeg or png'));
+        }
+
+        cb(undefined, true);
+    }
+})
+
+// insert/update image
+router.post('/tasks/:id/document', auth, upload.single('document'), async (req, res) => {
+
+    const bufferImage = await sharp(req.file.buffer).resize({ width: 250, height: 250 }).png().toBuffer()
+
+    try{
+        const task = await Task.findById(req.params.id)
+
+        if(!task){
+            res.status(404).send({ error: 'No task found!'})
+        }
+
+        task.document = bufferImage;
+        await task.save()
+        res.send({ success: 'Task document uploaded successfully!'})
+    } catch (e) {
+        res.status(400).send(e)
+    }
+
+}, (error, req, res, next) => {
+    res.status(400).send({ error: error.message })
+})
+
+// delete image
+router.delete('/tasks/:id/document', auth, async (req, res) => {
+    try{
+        const task = await Task.findById(req.params.id)
+
+        if(!task){
+            res.status(400).send({ error: 'No task found!'})
+        }
+
+        task.document = undefined;
+
+        await task.save();
+
+        res.send({ success: 'Task document deleted successfully!'})
+
+    } catch (e) {
+        res.status(500).send({ error: e.message })
+    }
+})
+
+// Open image
+router.get('/tasks/:id/document', async (req, res) => {
+    try {
+        const task = await Task.findById(req.params.id);
+        if (!task || !task.document) {
+            throw new Error()
+        }
+
+        res.set('Content-Type', 'image/jpg');
+        res.send(task.document)
+    } catch (e) {
+        res.status(404).send('Image not found!');
     }
 })
 

@@ -16,10 +16,21 @@ const taskSchema = new mongoose.Schema({
         required: true,
         ref: 'User'
 
+    },
+    document: {
+        type: Buffer
     }
 }, {
     timestamps: true
 })
+
+taskSchema.methods.toJSON = function () {
+    const task = this.toObject();
+
+    delete task.document;
+
+    return task;
+}
 
 const Task = mongoose.model('Task', taskSchema)
 

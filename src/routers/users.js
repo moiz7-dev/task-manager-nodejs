@@ -122,6 +122,7 @@ router.post('/users/logoutAll', auth, async (req, res) => {
     }
 })
 
+//image
 const upload = multer({
     limits: {
         fileSize: 1024 * 1024 // 1mb size 
